@@ -37,7 +37,7 @@
   <Fragment>
     <Component Id="CMP_RegClsidA_InprocServer32"
                Directory="INSTALLFOLDER"
-               Guid="A1B2C3D4-E5F6-7890-ABCD-EF1234567890">
+               Guid="34309C66-6A33-4F7B-8649-C2A9F238EC01">
       <RegistryValue
           Root="HKCR"
           Key="CLSID\{90E3822E-5F70-40BF-884E-77544797AD41}\InprocServer32"
@@ -62,7 +62,7 @@
   <Fragment>
     <Component Id="CMP_RegClsidB_InprocServer32"
                Directory="INSTALLFOLDER"
-               Guid="B2C3D4E5-F6A7-8901-BCDE-F12345678901">
+               Guid="82D51590-9871-40A7-9ACE-0E56EF2173EA">
       <RegistryValue
           Root="HKCR"
           Key="CLSID\{2CFC1F9E-0B23-48C3-AE46-29025209D0D4}\InprocServer32"
@@ -91,7 +91,7 @@
   <Fragment>
     <Component Id="CMP_RegClsidB_AppIdValue"
                Directory="INSTALLFOLDER"
-               Guid="C3D4E5F6-A7B8-9012-CDEF-123456789012">
+               Guid="5D8DF31B-3046-435C-BD3B-33FAC39E2B19">
       <RegistryValue
           Root="HKCR"
           Key="CLSID\{2CFC1F9E-0B23-48C3-AE46-29025209D0D4}"
@@ -110,7 +110,7 @@
   <Fragment>
     <Component Id="CMP_RegClsidB_DisplayName"
                Directory="INSTALLFOLDER"
-               Guid="D4E5F6A7-B8C9-0123-DEF0-234567890123">
+               Guid="9D7DBD66-1407-4FB3-BFCD-A50B95E13630">
       <RegistryValue
           Root="HKCR"
           Key="CLSID\{2CFC1F9E-0B23-48C3-AE46-29025209D0D4}"
@@ -139,7 +139,7 @@
   <Fragment>
     <Component Id="CMP_RegShellEx_Ai_Thumb"
                Directory="INSTALLFOLDER"
-               Guid="E5F6A7B8-C9D0-1234-EF01-345678901234">
+               Guid="D5511DB4-C413-4580-87FB-E8885264F56A">
       <RegistryValue
           Root="HKCR"
           Key="SystemFileAssociations\.ai\ShellEx\{e357fccd-a995-4576-b01f-234630154e96}"
@@ -153,7 +153,7 @@
   <Fragment>
     <Component Id="CMP_RegShellEx_Ai_Preview"
                Directory="INSTALLFOLDER"
-               Guid="F6A7B8C9-D0E1-2345-F012-456789012345">
+               Guid="A1A08759-A639-45F1-BD8E-536A76BB9E1E">
       <RegistryValue
           Root="HKCR"
           Key="SystemFileAssociations\.ai\shellex\{8895b1c6-b41f-4c1c-a562-0d564250836f}"
@@ -167,7 +167,7 @@
   <Fragment>
     <Component Id="CMP_RegShellEx_Psd_Thumb"
                Directory="INSTALLFOLDER"
-               Guid="A7B8C9D0-E1F2-3456-0123-567890123456">
+               Guid="0A40C8F6-3326-4807-8F24-0A148A763E9A">
       <RegistryValue
           Root="HKCR"
           Key="SystemFileAssociations\.psd\ShellEx\{e357fccd-a995-4576-b01f-234630154e96}"
@@ -181,7 +181,7 @@
   <Fragment>
     <Component Id="CMP_RegShellEx_Psd_Preview"
                Directory="INSTALLFOLDER"
-               Guid="B8C9D0E1-F2A3-4567-1234-678901234567">
+               Guid="77603314-DB68-46D4-BE2B-D0C66B70CEB3">
       <RegistryValue
           Root="HKCR"
           Key="SystemFileAssociations\.psd\shellex\{8895b1c6-b41f-4c1c-a562-0d564250836f}"
@@ -195,7 +195,7 @@
   <Fragment>
     <Component Id="CMP_RegShellEx_Psb_Thumb"
                Directory="INSTALLFOLDER"
-               Guid="C9D0E1F2-A3B4-5678-2345-789012345678">
+               Guid="3364CB62-5E7B-409D-8526-CD31EE753448">
       <RegistryValue
           Root="HKCR"
           Key="SystemFileAssociations\.psb\ShellEx\{e357fccd-a995-4576-b01f-234630154e96}"
@@ -209,7 +209,7 @@
   <Fragment>
     <Component Id="CMP_RegShellEx_Psb_Preview"
                Directory="INSTALLFOLDER"
-               Guid="D0E1F2A3-B4C5-6789-3456-890123456789">
+               Guid="2C404C83-167B-43B3-BB10-738CEC190D81">
       <RegistryValue
           Root="HKCR"
           Key="SystemFileAssociations\.psb\shellex\{8895b1c6-b41f-4c1c-a562-0d564250836f}"
@@ -223,7 +223,7 @@
   <Fragment>
     <Component Id="CMP_RegShellEx_Eps_Thumb"
                Directory="INSTALLFOLDER"
-               Guid="E1F2A3B4-C5D6-7890-4567-901234567890">
+               Guid="9F316648-EAC3-4DED-8768-A5A1C3E38C45">
       <RegistryValue
           Root="HKCR"
           Key="SystemFileAssociations\.eps\ShellEx\{e357fccd-a995-4576-b01f-234630154e96}"
@@ -237,7 +237,7 @@
   <Fragment>
     <Component Id="CMP_RegShellEx_Eps_Preview"
                Directory="INSTALLFOLDER"
-               Guid="F2A3B4C5-D6E7-8901-5678-012345678901">
+               Guid="9D3C0304-28A2-4460-A75C-0138E56E1E2B">
       <RegistryValue
           Root="HKCR"
           Key="SystemFileAssociations\.eps\shellex\{8895b1c6-b41f-4c1c-a562-0d564250836f}"
@@ -251,7 +251,7 @@
   <Fragment>
     <Component Id="CMP_RegShellEx_Svg_Thumb"
                Directory="INSTALLFOLDER"
-               Guid="A3B4C5D6-E7F8-9012-6789-123456789012">
+               Guid="0F618307-75E3-4AE1-B49A-1B744FC1567F">
       <RegistryValue
           Root="HKCR"
           Key="SystemFileAssociations\.svg\ShellEx\{e357fccd-a995-4576-b01f-234630154e96}"
@@ -265,7 +265,7 @@
   <Fragment>
     <Component Id="CMP_RegShellEx_Svg_Preview"
                Directory="INSTALLFOLDER"
-               Guid="B4C5D6E7-F8A9-0123-7890-234567890123">
+               Guid="114291E8-BC17-4466-9519-2B9EF031F5AE">
       <RegistryValue
           Root="HKCR"
           Key="SystemFileAssociations\.svg\shellex\{8895b1c6-b41f-4c1c-a562-0d564250836f}"
@@ -300,7 +300,7 @@
   <Fragment>
     <Component Id="CMP_RegPreviewHandlers"
                Directory="INSTALLFOLDER"
-               Guid="C5D6E7F8-A9B0-1234-8901-345678901234">
+               Guid="108EFF84-DE66-4DF6-BB84-29CD7287F944">
       <RegistryValue
           Root="HKLM"
           Key="SOFTWARE\Microsoft\Windows\CurrentVersion\PreviewHandlers"
