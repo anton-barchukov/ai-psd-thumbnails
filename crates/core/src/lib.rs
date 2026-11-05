@@ -65,7 +65,7 @@ pub enum CoreError {
 /// and no fallback is available (e.g. EPS without DOS header, ZIP-compressed PSD).
 pub fn decode_thumbnail(data: &[u8], ext: Ext, size: u32) -> Result<DecodedImage, CoreError> {
     let raw = match ext {
-        Ext::Psd | Ext::Psb => psd::decode(data, ext)?,
+        Ext::Psd | Ext::Psb => psd::decode(data, ext, size)?,
         Ext::Ai => ai::decode(data, size)?,
         Ext::Eps => eps::decode(data)?,
         Ext::Svg => svg::decode(data, size)?,

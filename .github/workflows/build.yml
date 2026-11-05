@@ -1,0 +1,84 @@
+name: build
+
+# Builds the shell extension and the MSI on a GitHub-hosted Windows runner so
+# the installer you download is traceable to the exact commit that produced it.
+#
+#  - every push / PR: core tests + release build + MSI as a workflow artifact
+#  - tag `v*`:         additionally attaches the MSI to a GitHub release
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write # needed only for the release step on tags
+
+env:
+  CARGO_TERM_COLOR: always
+  MSI_VERSION: "0.5.0" # keep in sync with installer/*.wxs and build-msi.ps1
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rust toolchain (stable, MSVC)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cargo cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: .NET 6 (WiX 4.0.x runtime)
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "6.0.x"
+
+      - name: Core decoder tests
+        env:
+          PDFIUM_DLL_PATH: ${{ github.workspace }}\third_party\bin
+        run: cargo test -p ai-psd-thumbnails-core --release
+
+      - name: Release build (DLL + custom-action exe)
+        run: cargo build --workspace --release
+
+      - name: COM smoke test (in-process, non-blocking)
+        # Loads the freshly built DLL and drives IThumbnailProvider/IPreviewHandler.
+        # Creates a child window of the desktop, which hosted runners usually
+        # allow but do not guarantee, so a failure here only warns.
+        continue-on-error: true
+        run: cargo test -p ai-psd-thumbnails-shell --release
+
+      - name: WiX 4.0.6
+        run: |
+          dotnet tool install --global wix --version 4.0.6
+          wix extension add --global WixToolset.Util.wixext/4.0.6
+          wix --version
+
+      - name: Build MSI
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          ./installer/build-msi.ps1 -Version $env:MSI_VERSION -OutDir (Resolve-Path dist)
+          Get-ChildItem dist
+          Get-FileHash dist/*.msi -Algorithm SHA256 | Format-List
+
+      - name: Upload MSI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-psd-thumbnails-${{ env.MSI_VERSION }}-${{ github.sha }}
+          path: dist/*.msi
+          if-no-files-found: error
+
+      - name: Attach MSI to release (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.msi
+          generate_release_notes: true

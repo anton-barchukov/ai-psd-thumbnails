@@ -23,7 +23,7 @@ cargo build --workspace --release
 .\installer\build-msi.ps1
 ```
 
-Output: `installer\ai-psd-thumbnails-0.1.0.msi`
+Output: `installer\ai-psd-thumbnails-<version>.msi`
 
 ## What Gets Installed
 
@@ -56,7 +56,7 @@ Output: `installer\ai-psd-thumbnails-0.1.0.msi`
 
 1. Build the MSI: `.\installer\build-msi.ps1`
 2. Open an elevated PowerShell prompt.
-3. Install: `msiexec /i installer\ai-psd-thumbnails-0.1.0.msi /l*v install.log`
+3. Install: `msiexec /i installer\ai-psd-thumbnails-<version>.msi /l*v install.log`
 4. Verify registry with regedit:
    - `HKCR\SystemFileAssociations\.ai\ShellEx\{e357fccd-...}` = `{90E3822E-...}`
    - `HKCR\SystemFileAssociations\.ai\shellex\{8895b1c6-...}` = `{2CFC1F9E-...}`
@@ -70,14 +70,14 @@ Output: `installer\ai-psd-thumbnails-0.1.0.msi`
    # Set leftover
    reg add "HKCR\.ai" /ve /d "SageThumbsImage.ai" /f
    # Repair install
-   msiexec /fv installer\ai-psd-thumbnails-0.1.0.msi /l*v repair.log
+   msiexec /fv installer\ai-psd-thumbnails-<version>.msi /l*v repair.log
    # Verify restored
    (Get-ItemProperty "HKCR:\.ai")."(default)"  # should be Adobe.Illustrator.28
    ```
-7. Upgrade test: bump version to 0.2.0 in `ai-psd-thumbnails.wxs`, rebuild MSI, install over 0.1.0. No duplicate keys; DLL replaced.
+7. Upgrade test: bump version to 0.2.0 in `ai-psd-thumbnails.wxs`, rebuild MSI, install over <version>. No duplicate keys; DLL replaced.
 8. Uninstall:
    ```powershell
-   msiexec /x installer\ai-psd-thumbnails-0.1.0.msi /l*v uninstall.log
+   msiexec /x installer\ai-psd-thumbnails-<version>.msi /l*v uninstall.log
    ```
    - Our registry keys removed; `HKCR\AppID\{6d2b5079-...}` still present.
    - Other preview handlers (Office PDF etc.) still work.
@@ -106,5 +106,5 @@ release manifest before distributing.
 The MSI is not code-signed in this build. For distribution, sign with:
 ```powershell
 signtool sign /fd sha256 /tr http://timestamp.digicert.com /td sha256 `
-    /f <cert.pfx> /p <password> installer\ai-psd-thumbnails-0.1.0.msi
+    /f <cert.pfx> /p <password> installer\ai-psd-thumbnails-<version>.msi
 ```

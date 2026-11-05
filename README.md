@@ -20,6 +20,24 @@ Want the same workflow? [**Get AgentKit Engineer with 50% off**](https://agentki
 
 ---
 
+## Changes in this fork
+
+- **Sharp PSD thumbnails.** Upstream always uses the 160 px JPEG preview Photoshop
+  embeds and scales it up to Explorer's 256 px tiles, which looks blocky. This fork
+  decodes the full-resolution merged composite instead (row-streamed and
+  box-downsampled, so memory stays small even for 60-megapixel files), and only
+  falls back to the embedded JPEG when the composite is missing, flagged as not
+  real (Maximize Compatibility off), ZIP-compressed, 32-bit or in an unsupported
+  colour mode. Grayscale, RGB, CMYK, 8- and 16-bit, RAW and RLE are covered;
+  merged transparency is honoured (alpha-weighted, so no white fringes on logos).
+- **Smooth fallback.** When a small preview does have to be upscaled it is now
+  interpolated bilinearly instead of nearest-neighbour.
+- **Installer hygiene.** The sequential placeholder component GUIDs in
+  `registry-shellex.wxs` were replaced with real ones.
+- **CI build.** `.github/workflows/build.yml` builds the MSI on a GitHub-hosted
+  Windows runner for every push and attaches it to the release on `v*` tags, so
+  the installer is traceable to its commit.
+
 Windows Explorer thumbnails & preview pane for **Adobe Illustrator (.ai)**, **Photoshop (.psd/.psb)**, **EPS** and **SVG** files (plus **PDF** thumbnails), without installing any Adobe software.
 
 A lightweight COM shell extension written in Rust, shipped as a per-machine x64 MSI.
