@@ -1,7 +1,7 @@
 # ai-psd-thumbnails
 
-Windows Explorer thumbnail + preview-pane shell extension for `.ai .psd .psb .eps .svg`
-, written in Rust (windows-rs), shipped as a per-machine x64 MSI. Design rationale lives in
+Windows Explorer thumbnail + preview-pane shell extension for `.ai .psd .psb .eps .svg`,
+written in Rust (windows-rs), shipped as a per-machine x64 MSI. Design rationale lives in
 `plans/260610-1131-thumb-viewer-shell-extension/`; this file is the operational reference.
 
 ## Architecture
@@ -26,7 +26,7 @@ Format → render path:
 
 | Format | Fast path | Fallback |
 |---|---|---|
-| `.psd` | merged composite, row-streamed + box-downsampled to the requested size (Gray/RGB/CMYK, 8/16-bit, RAW/RLE, alpha via negative layer count) | resource 1036 JPEG thumb (1033 = old BGR) when the composite is missing, `hasRealMergedData=0` (res 1057), ZIP, 32-bit or exotic mode; the thumb is used directly whenever it is already ≥ requested size |
+| `.psd` | merged composite, row-streamed + box-downsampled to the requested size (Gray/RGB/CMYK, 8/16-bit, RAW/RLE, alpha via negative layer count); large images sample ≤ 8 source rows per output row within `SAMPLE_BUDGET` | resource 1036 JPEG thumb (1033 = old BGR) when the composite is missing, `hasRealMergedData=0` (res 1057), ZIP, 32-bit or exotic mode; the thumb is used directly whenever it is already ≥ requested size |
 | `.psb` | same (only Layer & Mask length and RLE row counts widen) | same |
 | `.ai` (PDF-style) | pdfium page-1 render | — |
 | `.ai` (EPS-style) | DOS-EPS TIFF → `%AI_Thumbnail` → XMP `xmpGImg` JPEG | Ghostscript subprocess |

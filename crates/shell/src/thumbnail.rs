@@ -1,14 +1,17 @@
 //! ThumbProvider: implements IThumbnailProvider + IInitializeWithStream.
 //!
 //! RefCell soundness contract:
-//!   GetThumbnail clones the bytes OUT of the RefCell borrow, then drops the borrow,
-//!   BEFORE calling any decoder or catch_unwind.  This means no RefCell borrow is live
+//!   GetThumbnail clones the `Arc` handle (not the file bytes) OUT of the RefCell
+//!   borrow, then drops the borrow, BEFORE calling any decoder or catch_unwind.
+//!   Sharing via `Arc` avoids a second full copy of the file, which for a
+//!   250 MB PSD would otherwise double the surrogate's peak memory.  This means no RefCell borrow is live
 //!   across the unwind boundary, preventing broken-invariant leaks if a decoder panics.
 //!
 //! IInitializeWithStream::Initialize rejects a second call (already-initialized guard).
 //! Stream bytes are capped at 2 GB by read_stream_all (stream_util).
 
 use std::cell::RefCell;
+use std::sync::Arc;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::atomic::Ordering;
 
@@ -35,7 +38,7 @@ use crate::stream_util::read_stream_all;
 #[implement(IThumbnailProvider, IInitializeWithStream)]
 pub(crate) struct ThumbProvider {
     /// Raw file bytes after Initialize; None until initialized.
-    bytes: RefCell<Option<Vec<u8>>>,
+    bytes: RefCell<Option<Arc<Vec<u8>>>>,
 }
 
 impl ThumbProvider {
@@ -74,7 +77,7 @@ impl IInitializeWithStream_Impl for ThumbProvider_Impl {
 
             // Drain the stream using the shared helper (DRY — same logic as preview).
             let data = read_stream_all(stream)?;
-            *self.bytes.borrow_mut() = Some(data);
+            *self.bytes.borrow_mut() = Some(Arc::new(data));
             Ok(())
         }));
 
@@ -101,13 +104,13 @@ impl IThumbnailProvider_Impl for ThumbProvider_Impl {
             return Err(windows::core::Error::from_hresult(E_UNEXPECTED));
         }
 
-        // --- RefCell soundness: clone bytes OUT, drop the borrow, THEN decode ---
+        // --- RefCell soundness: take a handle OUT, drop the borrow, THEN decode ---
         // No RefCell borrow must be live across catch_unwind or any decoder call.
-        let owned_bytes: Vec<u8> = {
+        let owned_bytes: Arc<Vec<u8>> = {
             let guard = self.bytes.borrow();
             match &*guard {
                 None => return Err(windows::core::Error::from_hresult(E_UNEXPECTED)),
-                Some(v) => v.clone(),
+                Some(v) => Arc::clone(v),
             }
             // guard drops here — borrow released before any decode work
         };

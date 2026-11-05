@@ -25,7 +25,9 @@ Want the same workflow? [**Get AgentKit Engineer with 50% off**](https://agentki
 - **Sharp PSD thumbnails.** Upstream always uses the 160 px JPEG preview Photoshop
   embeds and scales it up to Explorer's 256 px tiles, which looks blocky. This fork
   decodes the full-resolution merged composite instead (row-streamed and
-  box-downsampled, so memory stays small even for 60-megapixel files), and only
+  box-downsampled; for very large canvases only a few evenly spaced rows per
+  output row are read, so a 12 800 × 6 400 file still takes well under a
+  second), and only
   falls back to the embedded JPEG when the composite is missing, flagged as not
   real (Maximize Compatibility off), ZIP-compressed, 32-bit or in an unsupported
   colour mode. Grayscale, RGB, CMYK, 8- and 16-bit, RAW and RLE are covered;

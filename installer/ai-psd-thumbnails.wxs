@@ -10,7 +10,7 @@
   <Package
       Name="ai-psd-thumbnails"
       Manufacturer="ai-psd-thumbnails contributors"
-      Version="0.5.1"
+      Version="0.5.2"
       UpgradeCode="F4B5BFA4-F277-4D9A-B8C2-7EF38B0357B9"
       Language="1033"
       Codepage="1252"
@@ -185,7 +185,7 @@
           Key="SOFTWARE\ai-psd-thumbnails"
           Name="Version"
           Type="string"
-          Value="0.5.1"
+          Value="0.5.2"
           KeyPath="yes" />
     </Component>
   </Fragment>

@@ -12,14 +12,14 @@
     Ghostscript is already present) followed by ai-psd-thumbnails.msi.
 
 .PARAMETER Version
-    Bundle/MSI version (default: 0.5.1). Must match bundle.wxs and
+    Bundle/MSI version (default: 0.5.2). Must match bundle.wxs and
     ai-psd-thumbnails.wxs.
 
 .EXAMPLE
     .\installer\build-bundle.ps1
 #>
 param(
-    [string]$Version = "0.5.1",
+    [string]$Version = "0.5.2",
     [string]$OutDir  = $PSScriptRoot
 )
 

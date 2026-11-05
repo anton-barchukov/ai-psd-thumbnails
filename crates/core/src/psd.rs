@@ -8,7 +8,9 @@
 //!   2. The merged composite in the Image Data section: the full-resolution
 //!      flattened image Photoshop writes when "Maximize Compatibility" is on.
 //!      Decoded row by row and box-averaged straight into the requested size,
-//!      so memory stays O(row + output) even for 60-megapixel files.
+//!      so memory stays O(row + output). For large images only a few evenly
+//!      spaced source rows per output row are decoded, so time stays bounded
+//!      too (see `SAMPLE_BUDGET`).
 //!
 //! Choice: when the embedded thumbnail is at least as large as the requested
 //! size it is used (downscaling is sharp and it costs nothing). Otherwise the
@@ -29,9 +31,18 @@ use std::io::{Cursor, Read, Seek, SeekFrom};
 
 use crate::{CoreError, DecodedImage, Ext};
 
-/// Pixel budget for composite decoding (time bound, not memory: rows are
-/// streamed). 64 MP covers A2 at 300 dpi; beyond that the thumbnail is used.
-const MAX_COMPOSITE_PIXELS: u64 = 64 * 1024 * 1024;
+/// Work budget for composite decoding, in decoded sample bytes
+/// (rows × width × planes × bytes-per-sample). Bounds time, not memory (rows
+/// are streamed). 256 M ≈ a few hundred ms in release builds. Large images
+/// stay under it by decoding only a few source rows per output row; only if
+/// even one row per output row is too much does the thumbnail fallback kick in.
+const SAMPLE_BUDGET: u64 = 256 * 1024 * 1024;
+
+/// Source rows averaged per output row at most. With 8 evenly spaced rows the
+/// result is visually indistinguishable from a full box filter at thumbnail
+/// size, while a 12 800 × 6 400 composite at 256 px decodes 1 024 instead of
+/// 6 400 rows.
+const MAX_ROWS_PER_BIN: u64 = 8;
 
 /// Hard per-dimension cap (the PSB format limit).
 const MAX_DIM: u32 = 300_000;
@@ -418,9 +429,6 @@ fn decode_composite(
     if w == 0 || h == 0 || w > MAX_DIM || h > MAX_DIM {
         return Err(CoreError::Decode(format!("composite: bad dimensions {w}×{h}")));
     }
-    if (w as u64) * (h as u64) > MAX_COMPOSITE_PIXELS {
-        return Err(CoreError::NoThumbnail);
-    }
 
     let has_transparency = skip_layer_mask_info(cur, hdr.is_psb)?;
     let alpha_plane = if has_transparency && (hdr.channels as usize) > color_channels {
@@ -457,6 +465,11 @@ fn decode_composite(
         )
     };
 
+    // How many source rows feed each output row, within the work budget.
+    let row_cost = (w as u64) * (planes_needed as u64) * (bps as u64);
+    let rows_per_bin = plan_rows_per_bin(h as u64, th as u64, row_cost)
+        .ok_or(CoreError::NoThumbnail)?;
+
     // Per-column bin index, computed once instead of a division per pixel.
     let xmap: Vec<u32> = (0..w as u64).map(|x| (x * tw as u64 / w as u64) as u32).collect();
 
@@ -468,28 +481,38 @@ fn decode_composite(
     let mut rows: Vec<Vec<u8>> = vec![Vec::with_capacity(row_bytes); planes_needed];
     let mut rgb_row = vec![0u8; (w as usize) * 3];
 
-    for y in 0..h as usize {
-        for p in 0..planes_needed {
-            source.read_row(p, y, &mut rows[p])?;
-        }
-        convert_row(layout, &rows[..color_channels], bps, &mut rgb_row);
+    for by in 0..th as u64 {
+        // Source rows covered by this output row: [y0, y1).
+        let y0 = by * h as u64 / th as u64;
+        let y1 = ((by + 1) * h as u64 / th as u64).max(y0 + 1).min(h as u64);
+        let span = y1 - y0;
+        let k = span.min(rows_per_bin);
+        let bin_row = by as usize * tw as usize;
 
-        let by = (y as u64 * th as u64 / h as u64) as usize;
-        let bin_row = by * tw as usize;
-        let alpha = alpha_plane.map(|p| &rows[p]);
+        for j in 0..k {
+            // k evenly spaced rows, centred in their sub-span; k == span
+            // degenerates to every row.
+            let y = (y0 + (2 * j + 1) * span / (2 * k)) as usize;
 
-        for x in 0..w as usize {
-            let a = match alpha {
-                Some(ar) => ar[x * bps] as u64,
-                None => 255,
-            };
-            let bin = &mut acc[bin_row + xmap[x] as usize];
-            let px = &rgb_row[x * 3..x * 3 + 3];
-            bin[0] += px[0] as u64 * a;
-            bin[1] += px[1] as u64 * a;
-            bin[2] += px[2] as u64 * a;
-            bin[3] += a;
-            bin[4] += 1;
+            for p in 0..planes_needed {
+                source.read_row(p, y, &mut rows[p])?;
+            }
+            convert_row(layout, &rows[..color_channels], bps, &mut rgb_row);
+            let alpha = alpha_plane.map(|p| &rows[p]);
+
+            for x in 0..w as usize {
+                let a = match alpha {
+                    Some(ar) => ar[x * bps] as u64,
+                    None => 255,
+                };
+                let bin = &mut acc[bin_row + xmap[x] as usize];
+                let px = &rgb_row[x * 3..x * 3 + 3];
+                bin[0] += px[0] as u64 * a;
+                bin[1] += px[1] as u64 * a;
+                bin[2] += px[2] as u64 * a;
+                bin[3] += a;
+                bin[4] += 1;
+            }
         }
     }
 
@@ -509,6 +532,16 @@ fn decode_composite(
     }
 
     Ok(DecodedImage { width: tw, height: th, rgba })
+}
+
+/// Rows to sample per output row so that decoding stays within
+/// `SAMPLE_BUDGET`. Returns `None` when even one row per output row is over
+/// budget (absurdly wide PSBs), so the caller falls back to the thumbnail.
+fn plan_rows_per_bin(h: u64, th: u64, row_cost: u64) -> Option<u64> {
+    let per_bin = h.div_ceil(th.max(1)).clamp(1, MAX_ROWS_PER_BIN);
+    let rows_affordable = SAMPLE_BUDGET / row_cost.max(1);
+    let k = per_bin.min(rows_affordable / th.max(1));
+    (k >= 1).then_some(k)
 }
 
 /// Convert one row of planar colour channels into packed RGB8.
@@ -1136,6 +1169,41 @@ mod tests {
         let img = decode(&f.build(), Ext::Psd, 4096).unwrap();
         assert_eq!(img.width, MAX_TARGET);
         assert_eq!(img.height, 1);
+    }
+
+    #[test]
+    fn row_plan_respects_cap_and_budget() {
+        // 12 800 × 6 400 RGB at 256 px → 128 output rows, 50 source rows each → capped at 8.
+        assert_eq!(plan_rows_per_bin(6400, 128, 12800 * 3), Some(MAX_ROWS_PER_BIN));
+        // Fewer source rows per bin than the cap → all of them.
+        assert_eq!(plan_rows_per_bin(300, 100, 900), Some(3));
+        // No downscale → one row per bin.
+        assert_eq!(plan_rows_per_bin(64, 64, 192), Some(1));
+        // Budget trims k below the cap.
+        let th = 512;
+        assert_eq!(plan_rows_per_bin(100_000, th, SAMPLE_BUDGET / (th * 4)), Some(4));
+        // Absurdly wide 16-bit CMYK PSB: over budget even at one row per bin.
+        assert_eq!(plan_rows_per_bin(300_000, 1024, 300_000 * 4 * 2), None);
+    }
+
+    #[test]
+    fn tall_image_with_row_sampling_keeps_regions_intact() {
+        // 6 × 4000: top half red, bottom half blue. At size 40 each output row
+        // covers 100 source rows, of which 8 are sampled.
+        let (w, h) = (6u32, 4000u32);
+        let half = (w * h / 2) as usize;
+        let mut r = plane(w, h, 0);
+        let mut b = plane(w, h, 0);
+        r[..half].fill(255);
+        b[half..].fill(255);
+        for rle in [false, true] {
+            let mut f = Fixture::rgb(w, h, vec![r.clone(), plane(w, h, 0), b.clone()]);
+            f.rle = rle;
+            let img = decode(&f.build(), Ext::Psd, 40).unwrap();
+            assert_eq!((img.width, img.height), (1, 40));
+            assert_eq!(px(&img, 0, 5), [255, 0, 0, 255], "rle={rle}");
+            assert_eq!(px(&img, 0, 34), [0, 0, 255, 255], "rle={rle}");
+        }
     }
 
     #[test]

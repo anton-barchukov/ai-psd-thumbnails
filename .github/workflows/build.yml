@@ -18,7 +18,7 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
-  MSI_VERSION: "0.5.1" # keep in sync with installer/*.wxs and build-msi.ps1
+  MSI_VERSION: "0.5.2" # keep in sync with installer/*.wxs and build-msi.ps1
 
 jobs:
   build:
