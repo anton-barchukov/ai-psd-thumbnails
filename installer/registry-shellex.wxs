@@ -20,9 +20,9 @@
     for per-machine packages, providing clean rollback on uninstall.
   - Uninstall removes ONLY the components listed here (our own keys).
     The shared AppID key and all ProgID associations are left untouched.
-  - Formats: .ai .psd .psb .eps .svg (thumbnail + preview each) plus .pdf
-    (thumbnail ONLY — Explorer has no built-in .pdf thumbnail provider, but its
-    preview pane is already owned by the OS/Edge handler, so no .pdf preview row).
+  - Formats: .ai .psd .psb .eps .svg (thumbnail + preview each). .pdf is
+    deliberately NOT registered: PDFs are left to the OS / PowerToys / Acrobat
+    handlers, so arbitrary downloaded PDFs are never parsed by our pinned pdfium.
   - PreviewHandlers HKLM named value: required for the preview pane to enumerate
     our handler in the "preview handlers" list.
 -->
@@ -275,19 +275,6 @@
     </Component>
   </Fragment>
 
-  <!-- .pdf thumbnail (thumbnail ONLY — no preview counterpart; see header) -->
-  <Fragment>
-    <Component Id="CMP_RegShellEx_Pdf_Thumb"
-               Directory="INSTALLFOLDER"
-               Guid="8D6E2B67-2005-4834-99B4-64AAC4B6FEF7">
-      <RegistryValue
-          Root="HKCR"
-          Key="SystemFileAssociations\.pdf\ShellEx\{e357fccd-a995-4576-b01f-234630154e96}"
-          Value="{90E3822E-5F70-40BF-884E-77544797AD41}"
-          Type="string"
-          KeyPath="yes" />
-    </Component>
-  </Fragment>
 
   <!-- ── PreviewHandlers registration ─────────────────────────────────────────
 

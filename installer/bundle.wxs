@@ -20,7 +20,7 @@
      xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
 
   <Bundle Name="ai-psd-thumbnails"
-          Version="0.5.0"
+          Version="0.5.1"
           Manufacturer="ai-psd-thumbnails contributors"
           UpgradeCode="3258A938-B9B1-4E75-A0CE-9F018C28A23E">
 
@@ -65,7 +65,7 @@
       </ExePackage>
 
       <MsiPackage Id="ThumbViewerMsi"
-          SourceFile="ai-psd-thumbnails-0.5.0.msi"
+          SourceFile="ai-psd-thumbnails-0.5.1.msi"
           Vital="yes" />
     </Chain>
 

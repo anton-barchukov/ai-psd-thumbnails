@@ -10,7 +10,7 @@
   <Package
       Name="ai-psd-thumbnails"
       Manufacturer="ai-psd-thumbnails contributors"
-      Version="0.5.0"
+      Version="0.5.1"
       UpgradeCode="F4B5BFA4-F277-4D9A-B8C2-7EF38B0357B9"
       Language="1033"
       Codepage="1252"
@@ -60,7 +60,6 @@
       <ComponentRef Id="CMP_RegShellEx_Eps_Preview" />
       <ComponentRef Id="CMP_RegShellEx_Svg_Thumb" />
       <ComponentRef Id="CMP_RegShellEx_Svg_Preview" />
-      <ComponentRef Id="CMP_RegShellEx_Pdf_Thumb" />
 
       <!-- Registry: PreviewHandlers enumeration entry -->
       <ComponentRef Id="CMP_RegPreviewHandlers" />
@@ -186,7 +185,7 @@
           Key="SOFTWARE\ai-psd-thumbnails"
           Name="Version"
           Type="string"
-          Value="0.5.0"
+          Value="0.5.1"
           KeyPath="yes" />
     </Component>
   </Fragment>

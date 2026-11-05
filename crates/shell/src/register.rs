@@ -5,8 +5,8 @@
 //!     HKCR\CLSID\{CLSID-A}\InprocServer32         (thumbnail; DLL path + ThreadingModel)
 //!     HKCR\CLSID\{CLSID-B}\InprocServer32         (preview; DLL path + ThreadingModel)
 //!     HKCR\CLSID\{CLSID-B}  AppID named value     (= {6d2b5079-...} prevhost surrogate)
-//!     HKCR\SystemFileAssociations\.<ext>\ShellEx\{e357fccd-...}   (thumbnail, 6 exts incl .pdf)
-//!     HKCR\SystemFileAssociations\.<ext>\shellex\{8895b1c6-...}   (preview, 5 exts — NOT .pdf)
+//!     HKCR\SystemFileAssociations\.<ext>\ShellEx\{e357fccd-...}   (thumbnail, 5 exts)
+//!     HKCR\SystemFileAssociations\.<ext>\shellex\{8895b1c6-...}   (preview, same 5 exts)
 //!     HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\PreviewHandlers  (preview display name)
 //!   NEVER creates, overwrites, or deletes:
 //!     HKCR\AppID\{6d2b5079-2f0b-48dd-ab7f-97cec514d30b}  — OS-owned prevhost key.
@@ -43,10 +43,11 @@ const PREVIEW_SHELLEXT_GUID: &str = "{8895b1c6-b41f-4c1c-a562-0d564250836f}";
 /// delete the HKCR\AppID\{...} key itself.
 const PREVHOST_APPID: &str = "{6d2b5079-2f0b-48dd-ab7f-97cec514d30b}";
 
-/// Extensions to register the THUMBNAIL handler for. `.pdf` is thumbnail-only:
-/// Explorer has no built-in .pdf thumbnail provider, so this slot is free, while
-/// its preview pane is already owned by Edge — see `PREVIEW_EXTS`.
-const THUMB_EXTS: &[&str] = &[".ai", ".psd", ".psb", ".eps", ".svg", ".pdf"];
+/// Extensions to register the THUMBNAIL handler for. `.pdf` is deliberately
+/// absent: PDFs stay with the OS / PowerToys / Acrobat handlers so that
+/// arbitrary downloaded PDFs are never auto-parsed by our pinned pdfium build
+/// (which does not self-update). PDF-based `.ai` files still render via pdfium.
+const THUMB_EXTS: &[&str] = &[".ai", ".psd", ".psb", ".eps", ".svg"];
 
 /// Extensions to register the PREVIEW handler for. Deliberately excludes `.pdf`:
 /// the OS/Edge preview handler occupies the ext-level shellex slot on every Win11
@@ -357,10 +358,11 @@ fn unregister_impl() -> Result<(), HRESULT> {
 mod tests {
     use super::{PREVIEW_EXTS, THUMB_EXTS};
 
-    /// `.pdf` is thumbnail-only: present in THUMB_EXTS, absent from PREVIEW_EXTS.
+    /// `.pdf` is never registered: PDFs stay with the OS / PowerToys / Acrobat
+    /// handlers so downloaded PDFs are not auto-parsed by the pinned pdfium.
     #[test]
-    fn pdf_is_thumbnail_only() {
-        assert!(THUMB_EXTS.contains(&".pdf"), "THUMB_EXTS must include .pdf");
+    fn pdf_is_not_registered() {
+        assert!(!THUMB_EXTS.contains(&".pdf"), "THUMB_EXTS must NOT include .pdf");
         assert!(!PREVIEW_EXTS.contains(&".pdf"), "PREVIEW_EXTS must NOT include .pdf");
     }
 

@@ -34,11 +34,15 @@ Want the same workflow? [**Get AgentKit Engineer with 50% off**](https://agentki
   interpolated bilinearly instead of nearest-neighbour.
 - **Installer hygiene.** The sequential placeholder component GUIDs in
   `registry-shellex.wxs` were replaced with real ones.
+- **No PDF thumbnails.** Upstream's `.pdf` thumbnail registration was dropped:
+  PDFs stay with Windows / PowerToys / Acrobat, so downloaded PDFs are never
+  auto-parsed by the bundled pdfium, which does not update itself. PDF-based
+  `.ai` files still render through pdfium.
 - **CI build.** `.github/workflows/build.yml` builds the MSI on a GitHub-hosted
   Windows runner for every push and attaches it to the release on `v*` tags, so
   the installer is traceable to its commit.
 
-Windows Explorer thumbnails & preview pane for **Adobe Illustrator (.ai)**, **Photoshop (.psd/.psb)**, **EPS** and **SVG** files (plus **PDF** thumbnails), without installing any Adobe software.
+Windows Explorer thumbnails & preview pane for **Adobe Illustrator (.ai)**, **Photoshop (.psd/.psb)**, **EPS** and **SVG** files, without installing any Adobe software.
 
 A lightweight COM shell extension written in Rust, shipped as a per-machine x64 MSI.
 
@@ -55,7 +59,6 @@ Explorer shows blank icons for design files unless you install heavyweight suite
 | `.psd` / `.psb` | Embedded Photoshop thumbnail resource, falling back to the flattened composite |
 | `.eps` | Embedded DOS-EPS TIFF preview → XMP thumbnail → Ghostscript* |
 | `.svg` | Rendered with [resvg](https://github.com/linebender/resvg) (external references disabled) |
-| `.pdf` | First page rendered via bundled [pdfium](https://github.com/bblanchon/pdfium-binaries) (thumbnail only — the preview pane is left to the OS/Edge PDF handler) |
 
 \* Files with **no embedded preview at all** are rendered through [Ghostscript](https://ghostscript.com) **if it is installed**, as an isolated, sandboxed (`-dSAFER`), timeout-guarded subprocess. Ghostscript is AGPL and is therefore never bundled; the optional `-setup.exe` bundle offers to download the official installer as a separate product.
 

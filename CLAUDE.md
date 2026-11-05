@@ -1,7 +1,7 @@
 # ai-psd-thumbnails
 
 Windows Explorer thumbnail + preview-pane shell extension for `.ai .psd .psb .eps .svg`
-(plus thumbnail-only `.pdf`), written in Rust (windows-rs), shipped as a per-machine x64 MSI. Design rationale lives in
+, written in Rust (windows-rs), shipped as a per-machine x64 MSI. Design rationale lives in
 `plans/260610-1131-thumb-viewer-shell-extension/`; this file is the operational reference.
 
 ## Architecture
@@ -32,7 +32,6 @@ Format → render path:
 | `.ai` (EPS-style) | DOS-EPS TIFF → `%AI_Thumbnail` → XMP `xmpGImg` JPEG | Ghostscript subprocess |
 | `.eps` | DOS-EPS embedded TIFF preview → XMP `xmpGImg` JPEG | Ghostscript subprocess |
 | `.svg` | resvg/usvg (external hrefs disabled, dims capped) | — |
-| `.pdf` | pdfium page-1 render (same route as PDF-style `.ai`; magic `%PDF` → `Ext::Ai`) | — |
 
 ## Build
 
@@ -119,12 +118,13 @@ file association, or OpenWith entry. `.ai` stays `Adobe.Illustrator.28`.
 | `HKCR\CLSID\{our two CLSIDs}` | InprocServer32, `ThreadingModel=Apartment` |
 | `AppID` named **value** on preview CLSID | `{6d2b5079-2f0b-48dd-ab7f-97cec514d30b}` (prevhost) |
 
-Thumbnail is registered for 6 exts (`.ai .psd .psb .eps .svg .pdf`); preview for 5 (NOT
-`.pdf`). `.pdf` is thumbnail-only: Explorer ships no built-in `.pdf` thumbnail provider so the
-`{e357fccd}` slot is free, but the preview pane is already owned by the OS/Edge PDF handler at
-the ext level, which would shadow ours — so we don't author a `.pdf` preview row. Any
-higher-precedence thumbnail handler a user installs later (Acrobat at ext/ProgID level) wins
-over our `SystemFileAssociations` entry by design — we are a polite fallback, never a hijacker.
+Thumbnail and preview are registered for the same 5 exts (`.ai .psd .psb .eps .svg`).
+`.pdf` is deliberately NOT registered (removed in 0.5.1): PDFs stay with the OS /
+PowerToys / Acrobat handlers, so arbitrary downloaded PDFs are never auto-parsed by the
+pinned, non-self-updating pdfium. PDF-based `.ai` files still go through pdfium (magic
+`%PDF` → `Ext::Ai`). Any higher-precedence handler a user installs (ext/ProgID level)
+wins over our `SystemFileAssociations` entry by design — we are a polite fallback,
+never a hijacker.
 The split lives in `crates/shell/src/register.rs` (`THUMB_EXTS` vs `PREVIEW_EXTS`).
 
 NEVER author, modify, or delete the `HKCR\AppID\{6d2b5079-...}` **key** itself — it is

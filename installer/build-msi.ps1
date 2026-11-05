@@ -9,7 +9,7 @@
     3. Runs `wix build` to produce ai-psd-thumbnails-<version>.msi.
 
 .PARAMETER Version
-    Package version string (default: 0.5.0).  Must match the Version attribute in
+    Package version string (default: 0.5.1).  Must match the Version attribute in
     ai-psd-thumbnails.wxs.
 
 .PARAMETER OutDir
@@ -17,10 +17,10 @@
 
 .EXAMPLE
     .\installer\build-msi.ps1
-    .\installer\build-msi.ps1 -Version 0.5.0 -OutDir dist\
+    .\installer\build-msi.ps1 -Version 0.5.1 -OutDir dist\
 #>
 param(
-    [string]$Version = "0.5.0",
+    [string]$Version = "0.5.1",
     [string]$OutDir  = $PSScriptRoot
 )
 
