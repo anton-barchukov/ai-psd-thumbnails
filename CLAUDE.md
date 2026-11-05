@@ -26,8 +26,8 @@ Format → render path:
 
 | Format | Fast path | Fallback |
 |---|---|---|
-| `.psd` | resource 1036 embedded JPEG thumb (RGB; 1033 = old BGR) | flattened composite |
-| `.psb` | same (Image Resources section layout identical to PSD) | composite (RLE counts widen to 4 bytes) |
+| `.psd` | merged composite, row-streamed + box-downsampled to the requested size (Gray/RGB/CMYK, 8/16-bit, RAW/RLE, alpha via negative layer count); large images sample ≤ 8 source rows per output row within `SAMPLE_BUDGET` | resource 1036 JPEG thumb (1033 = old BGR) when the composite is missing, `hasRealMergedData=0` (res 1057), ZIP, 32-bit or exotic mode; the thumb is used directly whenever it is already ≥ requested size |
+| `.psb` | same (only Layer & Mask length and RLE row counts widen) | same |
 | `.ai` (PDF-style) | pdfium page-1 render | — |
 | `.ai` (EPS-style) | DOS-EPS TIFF → `%AI_Thumbnail` → XMP `xmpGImg` JPEG | Ghostscript subprocess |
 | `.eps` | DOS-EPS embedded TIFF preview → XMP `xmpGImg` JPEG | Ghostscript subprocess |

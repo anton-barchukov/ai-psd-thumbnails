@@ -34,7 +34,7 @@ Explorer shows blank icons for design files unless you install heavyweight suite
 |---|---|
 | `.ai` (modern, PDF-based) | First page rendered via bundled [pdfium](https://github.com/bblanchon/pdfium-binaries) |
 | `.ai` (legacy, EPS-based) | Embedded DOS-EPS TIFF → `%AI_Thumbnail` → XMP thumbnail → Ghostscript* |
-| `.psd` / `.psb` | Embedded Photoshop thumbnail resource, falling back to the flattened composite |
+| `.psd` / `.psb` | Full-resolution merged composite, box-downsampled to the requested size (Gray/RGB/CMYK, 8/16-bit, RAW/RLE, transparency); falls back to the embedded 160 px thumbnail when the composite is missing or unsupported |
 | `.eps` | Embedded DOS-EPS TIFF preview → XMP thumbnail → Ghostscript* |
 | `.svg` | Rendered with [resvg](https://github.com/linebender/resvg) (external references disabled) |
 | `.pdf` | First page rendered via bundled [pdfium](https://github.com/bblanchon/pdfium-binaries) (thumbnail only — the preview pane is left to the OS/Edge PDF handler) |
