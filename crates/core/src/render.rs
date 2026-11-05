@@ -35,11 +35,15 @@ pub fn fit_square(img: DecodedImage, size: u32) -> DecodedImage {
 
     // Downscale with box averaging — halftone/dithered sources (common in EPS
     // previews) alias into visible checker patterns under nearest-neighbour.
-    // Upscale keeps nearest (box degenerates to it for 1-pixel footprints).
+    // Upscale bilinearly: the sources that land here are small embedded
+    // previews (160 px PSD thumbnails, EPS TIFF previews) and nearest-neighbour
+    // turns them into visible blocks at Explorer's 256 px tiles.
     let scaled = if scaled_w < img.width || scaled_h < img.height {
         scale_box_average(&img, scaled_w, scaled_h)
+    } else if scaled_w == img.width && scaled_h == img.height {
+        img.rgba.clone()
     } else {
-        scale_nearest(&img, scaled_w, scaled_h)
+        scale_bilinear(&img, scaled_w, scaled_h)
     };
 
     // Letterbox: centre the scaled image in a size × size transparent canvas.
@@ -59,21 +63,57 @@ pub fn fit_square(img: DecodedImage, size: u32) -> DecodedImage {
     DecodedImage { width: size, height: size, rgba: canvas }
 }
 
-/// Nearest-neighbour downscale/upscale.
-fn scale_nearest(img: &DecodedImage, target_w: u32, target_h: u32) -> Vec<u8> {
+/// Bilinear upscale. Interpolates in premultiplied space so colour under
+/// transparent pixels cannot fringe into opaque neighbours, then
+/// un-premultiplies back to the straight-alpha `DecodedImage` convention.
+fn scale_bilinear(img: &DecodedImage, target_w: u32, target_h: u32) -> Vec<u8> {
+    let (sw, sh) = (img.width as usize, img.height as usize);
     let mut out = vec![0u8; (target_w * target_h * 4) as usize];
+    if sw == 0 || sh == 0 {
+        return out;
+    }
+
+    // Premultiplied source as f32 for cheap interpolation.
+    let src: Vec<[f32; 4]> = img
+        .rgba
+        .chunks_exact(4)
+        .map(|p| {
+            let a = p[3] as f32 / 255.0;
+            [p[0] as f32 * a, p[1] as f32 * a, p[2] as f32 * a, p[3] as f32]
+        })
+        .collect();
+
+    // Pixel-centre mapping, clamped at the borders.
+    let coord = |d: u32, dst: u32, srcn: usize| -> (usize, usize, f32) {
+        let s = ((d as f32 + 0.5) * srcn as f32 / dst as f32 - 0.5).max(0.0);
+        let i0 = (s as usize).min(srcn - 1);
+        let i1 = (i0 + 1).min(srcn - 1);
+        (i0, i1, s - i0 as f32)
+    };
 
     for dy in 0..target_h {
+        let (y0, y1, fy) = coord(dy, target_h, sh);
         for dx in 0..target_w {
-            // Map destination pixel back to source using nearest-neighbour.
-            let sx = (dx as f64 * img.width as f64 / target_w as f64) as u32;
-            let sy = (dy as f64 * img.height as f64 / target_h as f64) as u32;
-            let sx = sx.min(img.width.saturating_sub(1));
-            let sy = sy.min(img.height.saturating_sub(1));
-
-            let src = ((sy * img.width + sx) * 4) as usize;
+            let (x0, x1, fx) = coord(dx, target_w, sw);
+            let p00 = src[y0 * sw + x0];
+            let p10 = src[y0 * sw + x1];
+            let p01 = src[y1 * sw + x0];
+            let p11 = src[y1 * sw + x1];
+            let mut v = [0f32; 4];
+            for c in 0..4 {
+                let top = p00[c] + (p10[c] - p00[c]) * fx;
+                let bottom = p01[c] + (p11[c] - p01[c]) * fx;
+                v[c] = top + (bottom - top) * fy;
+            }
+            let a = v[3];
             let dst = ((dy * target_w + dx) * 4) as usize;
-            out[dst..dst + 4].copy_from_slice(&img.rgba[src..src + 4]);
+            if a > 0.0 {
+                let k = 255.0 / a;
+                out[dst] = (v[0] * k).round().clamp(0.0, 255.0) as u8;
+                out[dst + 1] = (v[1] * k).round().clamp(0.0, 255.0) as u8;
+                out[dst + 2] = (v[2] * k).round().clamp(0.0, 255.0) as u8;
+                out[dst + 3] = a.round().clamp(0.0, 255.0) as u8;
+            }
         }
     }
 
@@ -174,6 +214,33 @@ mod tests {
         let out = fit_square(img, 64);
         assert_eq!(out.width, 64);
         assert_eq!(out.height, 64);
+        // Solid colour must survive interpolation untouched, everywhere.
+        assert!(out.rgba.chunks_exact(4).all(|p| p == [100, 150, 200, 255]));
+    }
+
+    #[test]
+    fn bilinear_upscale_is_smooth_not_blocky() {
+        // 2×1 black|white → 8×1: nearest would give 4 black then 4 white;
+        // bilinear must produce a monotone ramp with intermediate greys.
+        let img = DecodedImage { width: 2, height: 1, rgba: vec![0, 0, 0, 255, 255, 255, 255, 255] };
+        let out = scale_bilinear(&img, 8, 1);
+        let greys: Vec<u8> = out.chunks_exact(4).map(|p| p[0]).collect();
+        assert!(greys.windows(2).all(|w| w[0] <= w[1]), "{greys:?}");
+        assert!(greys.iter().any(|&g| g > 20 && g < 235), "{greys:?}");
+        assert_eq!((greys[0], greys[7]), (0, 255));
+    }
+
+    #[test]
+    fn bilinear_upscale_does_not_fringe_transparent_colour() {
+        // Opaque red next to a transparent WHITE pixel: interpolated pixels
+        // must stay red (only alpha ramps), never go pink.
+        let img = DecodedImage { width: 2, height: 1, rgba: vec![255, 0, 0, 255, 255, 255, 255, 0] };
+        let out = scale_bilinear(&img, 8, 1);
+        for p in out.chunks_exact(4) {
+            if p[3] > 0 {
+                assert_eq!(&p[..3], &[255, 0, 0], "{p:?}");
+            }
+        }
     }
 
     #[test]
