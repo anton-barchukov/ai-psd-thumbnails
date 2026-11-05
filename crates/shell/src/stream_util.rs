@@ -4,20 +4,31 @@
 //! logic; this module keeps it in one place (DRY).
 
 use windows::Win32::Foundation::E_FAIL;
-use windows::Win32::System::Com::IStream;
+use windows::Win32::System::Com::{IStream, STATFLAG_NONAME, STATSTG};
 
 /// Maximum stream size accepted to guard against hostile / oversized files (2 GiB).
 const MAX_STREAM_BYTES: usize = 2 * 1024 * 1024 * 1024;
 
-/// Read-chunk size when draining an IStream.
-const READ_CHUNK: u32 = 64 * 1024;
+/// Read-chunk size when draining an IStream. 1 MiB keeps the number of COM
+/// round-trips low for multi-hundred-MB PSB files.
+const READ_CHUNK: u32 = 1024 * 1024;
 
 /// Drain an `IStream` into a `Vec<u8>`, up to `MAX_STREAM_BYTES`.
 ///
 /// Loops until `ISequentialStream::Read` reports S_FALSE or returns 0 bytes.
 /// Returns `E_FAIL` if the stream is too large or a read error occurs.
 pub(crate) fn read_stream_all(stream: &IStream) -> windows::core::Result<Vec<u8>> {
-    let mut data: Vec<u8> = Vec::new();
+    // Reserve the exact stream size up front when the stream reports it, so a
+    // 250 MB file doesn't grow through doubling to a 512 MB allocation. A bogus
+    // or oversized hint is ignored; the cap below still applies while reading.
+    let mut stat = STATSTG::default();
+    let size_hint = unsafe { stream.Stat(&mut stat, STATFLAG_NONAME) }
+        .ok()
+        .map(|_| stat.cbSize)
+        .filter(|&n| n > 0 && n <= MAX_STREAM_BYTES as u64)
+        .unwrap_or(0) as usize;
+
+    let mut data: Vec<u8> = Vec::with_capacity(size_hint);
     let mut chunk = vec![0u8; READ_CHUNK as usize];
 
     loop {

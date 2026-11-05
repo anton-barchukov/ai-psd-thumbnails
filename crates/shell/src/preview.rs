@@ -60,7 +60,8 @@ const E_ALREADY_INITIALIZED: HRESULT = HRESULT(0x800704DFu32 as i32);
 #[implement(IPreviewHandler, IInitializeWithStream, IObjectWithSite, IOleWindow)]
 pub(crate) struct PreviewProvider {
     /// Buffered stream bytes (set in Initialize, consumed in DoPreview).
-    bytes: RefCell<Option<Vec<u8>>>,
+    /// `Arc` so DoPreview can hold them without copying the whole file.
+    bytes: RefCell<Option<std::sync::Arc<Vec<u8>>>>,
     /// Parent HWND provided by SetWindow.
     parent_hwnd: Cell<HWND>,
     /// Child HWND we created in DoPreview.  Null until DoPreview succeeds.
@@ -126,7 +127,7 @@ impl IInitializeWithStream_Impl for PreviewProvider_Impl {
             })?;
 
             let data = read_stream_all(stream)?;
-            *self.bytes.borrow_mut() = Some(data);
+            *self.bytes.borrow_mut() = Some(std::sync::Arc::new(data));
             Ok(())
         }));
 
@@ -198,12 +199,12 @@ impl IPreviewHandler_Impl for PreviewProvider_Impl {
                 *self.window_state.borrow_mut() = None;
             }
 
-            // Clone bytes out — drop borrow before any decode or Win32 call.
-            let owned_bytes: Vec<u8> = {
+            // Take a handle out (no copy) — drop borrow before any decode or Win32 call.
+            let owned_bytes: std::sync::Arc<Vec<u8>> = {
                 let guard = self.bytes.borrow();
                 match &*guard {
                     None => return Err(windows::core::Error::from_hresult(E_UNEXPECTED)),
-                    Some(v) => v.clone(),
+                    Some(v) => std::sync::Arc::clone(v),
                 }
                 // borrow dropped here
             };
